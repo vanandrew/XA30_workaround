@@ -1,0 +1,17 @@
+services:
+  samba:
+    image: ghcr.io/servercontainers/samba:a3.18.0-s4.18.2-r0
+    network_mode: host
+    cap_add:
+      - CAP_NET_ADMIN
+    restart: always
+    environment:
+      SAMBA_CONF_SERVER_STRING: "XA30WO-SAMBA-SERVER"
+      SAMBA_CONF_LOG_LEVEL: 3
+      GROUP_data: 7777
+      ACCOUNT_sambauser: sambapasswd
+      UID_sambauser: 7000
+      GROUPS_sambauser: data
+      SAMBA_VOLUME_CONFIG_data: "[Data]; path=/shares/data; valid users = sambauser; guest ok = no; read only = no; browseable = yes; force group = data"
+    volumes:
+      - ./shares/data:/shares/data
