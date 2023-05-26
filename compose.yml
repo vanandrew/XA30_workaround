@@ -13,5 +13,7 @@ services:
       UID_sambauser: 7000
       GROUPS_sambauser: data
       SAMBA_VOLUME_CONFIG_data: "[Data]; path=/shares/data; valid users = sambauser; guest ok = no; read only = no; browseable = yes; force group = data"
+      SAMBA_VOLUME_CONFIG_scripts: "[Scripts]; path=/shares/scripts; valid users = sambauser; guest ok = no; read only = no; browseable = yes; force group = data"
     volumes:
       - ./shares/data:/shares/data
+      - ./:/shares/scripts
