@@ -106,10 +106,15 @@ def main():
         # only renaming if neccessary
         print("Saving nifti files...")
         nifti = Path(nifti)
+        echo_prefix = "e"
         for i, t in enumerate(TEs):
             if i == 0:
                 # check if e1 is in the filename
                 if "e1" not in nifti.name:
+                    # skip if echo1 is in filename
+                    if "echo1" in nifti.name:
+                        echo_prefix = "echo"
+                        continue
                     # if not, then add it to the nifti name and rename the file
                     orig_img_path = nifti_img_path
                     orig_json_path = nifti_json
@@ -123,7 +128,7 @@ def main():
                     shutil.move(orig_json_path, nifti_json)
                 continue
             # substitute the echo in output_filename
-            output_base = Path(str(nifti).replace("e1", f"e{i + 1}"))
+            output_base = Path(str(nifti).replace(f"{echo_prefix}1", f"{echo_prefix}{i + 1}"))
             # copy the metadata
             metadata_copy = metadata.copy()
             # replace the echo time
