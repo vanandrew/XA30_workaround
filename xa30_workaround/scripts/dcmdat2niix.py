@@ -91,6 +91,12 @@ def main():
 
         # now search for .dat files that neighbor the exemplar dicom file
         dat_files = list(dicom.parent.glob("*.dat"))
+
+        # if no .dat files were found, then skip this nifti
+        if len(dat_files) == 0:
+            print(f"Could not find any .dat files associated with {dicom}.")
+            continue
+
         # convert these files to a numpy array
         print(f"Found {len(dat_files)} .dat files associated with {dicom}.")
         print("Converting .dat files to numpy array...")
