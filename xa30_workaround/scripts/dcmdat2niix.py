@@ -99,8 +99,18 @@ def main():
 
         # convert these files to a numpy array
         print(f"Found {len(dat_files)} .dat files associated with {dicom}.")
-        print("Converting .dat files to numpy array...")
+        print("Converting .dat files to nifti...")
         data_array = dat_to_array(dat_files, rshape)
+
+        # check if number of frames in nifti matches number of frames in .dat files
+        if data_array.shape[-1] != shape[-1]:
+            raise ValueError("The number of frames in the .dat files does not match the number of frames in the nifti.")
+
+        # do first echo, first frame sanity check
+        if not np.all(np.isclose(data_array[..., 0, 0].astype("f8"), nifti_img.dataobj[..., 0])):
+            raise ValueError(
+                "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
+            )
 
         # loop over each echo skipping the first one
         # only renaming if neccessary
