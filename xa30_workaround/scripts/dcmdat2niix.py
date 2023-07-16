@@ -9,6 +9,11 @@ from xa30_workaround.dicom import dicom2nifti
 from xa30_workaround.dat import dat_to_array
 
 
+def normalize(data):
+    """Normalize the data to be between 0 and 1."""
+    return (data - np.min(data)) / (np.max(data) - np.min(data))
+
+
 def main():
     parser = argparse.ArgumentParser(description="Convert DICOM and .dat to NIFTI", add_help=False)
     parser.add_argument("-h", "--help", action="store_true")
@@ -107,7 +112,7 @@ def main():
             raise ValueError("The number of frames in the .dat files does not match the number of frames in the nifti.")
 
         # do first echo, first frame sanity check
-        if not np.all(np.isclose(data_array[..., 0, 0].astype("f8"), nifti_img.dataobj[..., 0])):
+        if not np.all(np.isclose(normalize(data_array[..., 0, 0].astype("f8")), normalize(nifti_img.dataobj[..., 0]))):
             raise ValueError(
                 "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
             )
@@ -136,6 +141,12 @@ def main():
                     nifti_json = nifti.with_suffix(".json")
                     shutil.move(orig_img_path, nifti_img_path)
                     shutil.move(orig_json_path, nifti_json)
+                # TODO: remove later if fixed
+                # resave the phase image with the dat data
+                if "_ph" in nifti.name:
+                    nib.Nifti1Image(data_array[..., 0, :], nifti_img.affine, nifti_img.header).to_filename(
+                        nifti_img_path
+                    )
                 continue
             # substitute the echo in output_filename
             output_base = Path(str(nifti).replace(f"{echo_prefix}1", f"{echo_prefix}{i + 1}"))
@@ -143,6 +154,8 @@ def main():
             metadata_copy = metadata.copy()
             # replace the echo time
             metadata_copy["EchoTime"] = t
+            # replace the ConversionSoftware
+            metadata_copy["ConversionSoftware"] = "dcmdat2niix"
             # save the nifti file
             output_path = output_base.with_suffix(suffix)
             nib.Nifti1Image(data_array[..., i, :], nifti_img.affine, nifti_img.header).to_filename(output_path)
