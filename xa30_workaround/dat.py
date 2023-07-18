@@ -1,9 +1,5 @@
 import numpy as np
 
-# TODO: this should be determined from the slice timing but for now we will hard code it
-# interleave indices
-indices = np.argsort(np.concatenate((np.arange(1, 72, 2), np.arange(0, 72, 2))))
-
 
 def dat_to_array(dat_files, shape):
     # frame_list
@@ -16,6 +12,12 @@ def dat_to_array(dat_files, shape):
         # convert to numpy array
         data = np.frombuffer(binary_data, dtype=np.uint16)
         data = data.reshape(*shape)
+        num_slices = data.shape[1]
+
+        # TODO: this should be determined from the slice timing but for now we will assume
+        # interleaved slices
+        indices = np.argsort(np.concatenate((np.arange(1, num_slices, 2), np.arange(0, num_slices, 2))))
+
         # reindex slices
         data = data[:, indices, :, :]
         # TODO: we should probably do multiple orientation checks to make sure this is correct
