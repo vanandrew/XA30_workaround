@@ -15,7 +15,7 @@ urls = { gitlab = "https://gitlab.com/vanandrew/omni" }
 dependencies = [
     "nibabel >= 4.0.2",
     "pydicom >= 2.3.1",
-    "numpy == 1.24.3",
+    "numpy == 1.22.4",
     "indexed-gzip >= 1.7.1",
 ]
 version = "0.0.1"
