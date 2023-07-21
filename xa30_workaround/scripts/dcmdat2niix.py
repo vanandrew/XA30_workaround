@@ -164,3 +164,7 @@ def main():
             with open(output_json, "w") as f:
                 json.dump(metadata_copy, f, indent=4)
     print("Done.")
+
+
+if __name__ == "__main__":
+    main()
