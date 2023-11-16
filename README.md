@@ -4,7 +4,7 @@ Workaround scripts for XA30.
 
 This repo contains some scripts to get around limitations of the SIEMENS XA30A MRI scanner.
 
-When running Multi-echo sequences with many measurements (like the BOLD NORDIC sequence), XA30A cannot handle the
+When running Multi-echo sequences with many measurements (like the CMRR BOLD sequence), XA30A cannot handle the
 load. The cause seems to be related to the second reconstruction pipeline that users do not have access to.
 
 > [!NOTE]
