@@ -75,10 +75,10 @@ def main():
                     break
 
         # load the json file of the nifti
-        nifti_json = Path(nifti).with_suffix(".json")
-        if not nifti_json.exists():
-            raise ValueError(f"Could not find json file {nifti_json}.")
-        with open(nifti_json, "r") as f:
+        nifti_json_path = Path(nifti).with_suffix(".json")
+        if not nifti_json_path.exists():
+            raise ValueError(f"Could not find json file {nifti_json_path}.")
+        with open(nifti_json_path, "r") as f:
             metadata = json.load(f)
 
         # load the nifti file
@@ -150,15 +150,15 @@ def main():
                         continue
                     # if not, then add it to the nifti name and rename the file
                     orig_img_path = nifti_img_path
-                    orig_json_path = nifti_json
+                    orig_json_path = nifti_json_path
                     if "_ph" in nifti.name:
                         nifti = Path(str(nifti).replace("_ph", "_e1_ph"))
                     else:
                         nifti = Path(str(nifti) + "_e1")
                     nifti_img_path = nifti.with_suffix(suffix)
-                    nifti_json = nifti.with_suffix(".json")
+                    nifti_json_path = nifti.with_suffix(".json")
                     shutil.move(orig_img_path, nifti_img_path)
-                    shutil.move(orig_json_path, nifti_json)
+                    shutil.move(orig_json_path, nifti_json_path)
                 # TODO: remove later if fixed
                 # resave the phase image with the dat data
                 if "_ph" in nifti.name:
