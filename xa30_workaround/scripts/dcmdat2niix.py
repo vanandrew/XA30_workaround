@@ -117,6 +117,8 @@ def main():
             run), or if any of your .dat or .dcm files are not the same size as its siblings 
             (could signal corrupted data). Exiting...
             """)
+            nifti_img_path.unlink()
+            nifti_json_path.unlink()
             sys.exit(1)
 
         # check if number of frames in nifti matches number of frames in .dat files
