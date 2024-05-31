@@ -92,6 +92,8 @@ def main():
 
         # get the shape of the nifti file
         shape = nifti_img.shape
+        if len(shape) == 3:
+            shape = tuple([*shape, 1])
         rshape = list(shape[::-1])
         rshape[0] = TEs.shape[0]  # we want # of TEs instead of frames
 
@@ -113,10 +115,16 @@ def main():
             raise ValueError("The number of frames in the .dat files does not match the number of frames in the nifti.")
 
         # do first echo, first frame sanity check
-        if not np.all(np.isclose(normalize(data_array[..., 0, 0].astype("f8")), normalize(nifti_img.dataobj[..., 0]))):
-            raise ValueError(
-                "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
-            )
+        if len(nifti_img.dataobj.shape) == 3:
+            if not np.all(np.isclose(normalize(data_array[..., 0, 0].astype("f8")), normalize(nifti_img.dataobj[...]))):
+                raise ValueError(
+                    "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
+                )
+        else:
+            if not np.all(np.isclose(normalize(data_array[..., 0, 0].astype("f8")), normalize(nifti_img.dataobj[..., 0]))):
+                raise ValueError(
+                    "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
+                )
 
         # loop over each echo skipping the first one
         # only renaming if neccessary
