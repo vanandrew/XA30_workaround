@@ -2,6 +2,7 @@
 import sys
 import json
 import shutil
+import re
 from pathlib import Path
 import argparse
 import numpy as np
@@ -165,6 +166,12 @@ def main():
             metadata_copy["EchoTime"] = t
             # replace the ConversionSoftware
             metadata_copy["ConversionSoftware"] = "dcmdat2niix"
+            # set the proper TE type in ImageTypeText
+            try:
+                te_idx = [t for t in range(len(metadata_copy["ImageTypeText"])) if 'TE' in metadata_copy["ImageTypeText"][t]][0]
+                metadata_copy["ImageTypeText"][te_idx] = f"TE{str(i + 1)}"
+            except IndexError:
+                pass
             # save the nifti file
             output_path = output_base.with_suffix(suffix)
             nib.Nifti1Image(data_array[..., i, :], nifti_img.affine, nifti_img.header).to_filename(output_path)
