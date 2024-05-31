@@ -2,6 +2,7 @@
 import sys
 import json
 import shutil
+import re
 from pathlib import Path
 import argparse
 import numpy as np
@@ -92,6 +93,8 @@ def main():
 
         # get the shape of the nifti file
         shape = nifti_img.shape
+        if len(shape) == 3:
+            shape = tuple([*shape, 1])
         rshape = list(shape[::-1])
         rshape[0] = TEs.shape[0]  # we want # of TEs instead of frames
 
@@ -113,10 +116,16 @@ def main():
             raise ValueError("The number of frames in the .dat files does not match the number of frames in the nifti.")
 
         # do first echo, first frame sanity check
-        if not np.all(np.isclose(normalize(data_array[..., 0, 0].astype("f8")), normalize(nifti_img.dataobj[..., 0]))):
-            raise ValueError(
-                "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
-            )
+        if len(nifti_img.dataobj.shape) == 3:
+            if not np.all(np.isclose(normalize(data_array[..., 0, 0].astype("f8")), normalize(nifti_img.dataobj[...]))):
+                raise ValueError(
+                    "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
+                )
+        else:
+            if not np.all(np.isclose(normalize(data_array[..., 0, 0].astype("f8")), normalize(nifti_img.dataobj[..., 0]))):
+                raise ValueError(
+                    "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
+                )
 
         # loop over each echo skipping the first one
         # only renaming if neccessary
@@ -157,6 +166,12 @@ def main():
             metadata_copy["EchoTime"] = t
             # replace the ConversionSoftware
             metadata_copy["ConversionSoftware"] = "dcmdat2niix"
+            # set the proper TE type in ImageTypeText
+            try:
+                te_idx = [t for t in range(len(metadata_copy["ImageTypeText"])) if 'TE' in metadata_copy["ImageTypeText"][t]][0]
+                metadata_copy["ImageTypeText"][te_idx] = f"TE{str(i + 1)}"
+            except IndexError:
+                pass
             # save the nifti file
             output_path = output_base.with_suffix(suffix)
             nib.Nifti1Image(data_array[..., i, :], nifti_img.affine, nifti_img.header).to_filename(output_path)
