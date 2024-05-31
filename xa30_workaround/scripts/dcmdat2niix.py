@@ -109,7 +109,15 @@ def main():
         # convert these files to a numpy array
         print(f"Found {len(dat_files)} .dat files associated with {dicom}.")
         print("Converting .dat files to nifti...")
-        data_array = dat_to_array(dat_files, rshape)
+        try:
+            data_array = dat_to_array(dat_files, rshape)
+        except RuntimeError:
+            print("""
+            Check and see if you either have an extra .dcm file (indicative of an interrupted
+            run), or if any of your .dat or .dcm files are not the same size as its siblings 
+            (could signal corrupted data). Exiting...
+            """)
+            sys.exit(1)
 
         # check if number of frames in nifti matches number of frames in .dat files
         if data_array.shape[-1] != shape[-1]:

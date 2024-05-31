@@ -1,5 +1,5 @@
 import numpy as np
-
+import sys
 
 def dat_to_array(dat_files, shape):
     # frame_list
@@ -11,7 +11,11 @@ def dat_to_array(dat_files, shape):
 
         # convert to numpy array
         data = np.frombuffer(binary_data, dtype=np.uint16)
-        data = data.reshape(*shape)
+        try:
+            data = data.reshape(*shape)
+        except ValueError:
+            tb = sys.exception().__traceback__
+            raise RuntimeError(f"ERROR: cannot reshape array of size {data.shape} into shape {shape}. ").with_traceback(tb)
         num_slices = data.shape[1]
 
         # TODO: this should be determined from the slice timing but for now we will assume
