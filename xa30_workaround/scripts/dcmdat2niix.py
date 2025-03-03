@@ -91,9 +91,19 @@ def main():
         nifti_img = nib.load(nifti_img_path)
 
         # get the shape of the nifti file
+        # we want the first dimension to me the number of echos
+        # the next three dimensions should be the volume
+        # we want to ignore the number of time points
         shape = nifti_img.shape
         rshape = list(shape[::-1])
-        rshape[0] = TEs.shape[0]  # we want # of TEs instead of frames
+        if len(rshape) <= 3:
+            # it would appear there is only one time point
+            # prepend the number of echos to the array
+            rshape.insert(0, TEs.shape[0])
+        else:
+            # it looks like the first dimension is the number of time points
+            # replace time with number of TEs
+            rshape[0] = TEs.shape[0]
 
         # now search for .dat files that neighbor the exemplar dicom file
         dat_files = list(dicom.parent.glob("*.dat"))
@@ -109,14 +119,28 @@ def main():
         data_array = dat_to_array(dat_files, rshape)
 
         # check if number of frames in nifti matches number of frames in .dat files
-        if data_array.shape[-1] != shape[-1]:
-            raise ValueError("The number of frames in the .dat files does not match the number of frames in the nifti.")
+        if len(shape) <= 3:
+            # There is only one frame (time point) in the nifti.
+            if data_array.shape[-1] > 1:
+                raise ValueError(f"There is one frame in nifti but {data_array.shape[-1]} frames in the .dat files.")
+            data_array = np.squeeze(data_array)
+        else:
+            if data_array.shape[-1] != shape[-1]:
+                raise ValueError(f"The number of frames in the .dat files, {data_array.shape[-1]} does not match the number of frames in the nifti, {shape[-1]}.")
 
         # do first echo, first frame sanity check
-        if not np.all(np.isclose(normalize(data_array[..., 0, 0].astype("f8")), normalize(nifti_img.dataobj[..., 0]))):
-            raise ValueError(
-                "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
-            )
+        if len(shape) <= 3:
+            # There is only one frame (time point).
+            if not np.all(np.isclose(normalize(data_array[..., 0].astype("f8")), normalize(nifti_img.dataobj))):
+                raise ValueError(
+                    "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
+                )
+        else:
+            # Compare the first frames.
+            if not np.all(np.isclose(normalize(data_array[..., 0, 0].astype("f8")), normalize(nifti_img.dataobj[..., 0]))):
+                raise ValueError(
+                    "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
+                )
 
         # loop over each echo skipping the first one
         # only renaming if neccessary
@@ -145,9 +169,16 @@ def main():
                 # TODO: remove later if fixed
                 # resave the phase image with the dat data
                 if "_ph" in nifti.name:
-                    nib.Nifti1Image(data_array[..., 0, :], nifti_img.affine, nifti_img.header).to_filename(
-                        nifti_img_path
-                    )
+                    if len(shape) <= 3:
+                        # there is only one frame (time point)
+                        nib.Nifti1Image(data_array[..., 0], nifti_img.affine, nifti_img.header).to_filename(
+                            nifti_img_path
+                        )
+                    else:
+                        # save all frames
+                        nib.Nifti1Image(data_array[..., 0, :], nifti_img.affine, nifti_img.header).to_filename(
+                            nifti_img_path
+                        )
                 continue
             # substitute the echo in output_filename
             output_base = Path(str(nifti).replace(f"{echo_prefix}1", f"{echo_prefix}{i + 1}"))
@@ -159,7 +190,12 @@ def main():
             metadata_copy["ConversionSoftware"] = "dcmdat2niix"
             # save the nifti file
             output_path = output_base.with_suffix(suffix)
-            nib.Nifti1Image(data_array[..., i, :], nifti_img.affine, nifti_img.header).to_filename(output_path)
+            if len(shape) <= 3:
+                # there is only one frame (time point)
+                nib.Nifti1Image(data_array[..., i], nifti_img.affine, nifti_img.header).to_filename(output_path)
+            else:
+                # save all frames
+                nib.Nifti1Image(data_array[..., i, :], nifti_img.affine, nifti_img.header).to_filename(output_path)
             # save the json file
             output_json = output_path.with_suffix(".json")
             with open(output_json, "w") as f:
