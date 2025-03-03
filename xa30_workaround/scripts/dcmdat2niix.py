@@ -6,6 +6,8 @@ from pathlib import Path
 import argparse
 import numpy as np
 import nibabel as nib
+import os
+import pydicom
 from xa30_workaround.dicom import dicom2nifti
 from xa30_workaround.dat import dat_to_array
 
@@ -15,9 +17,26 @@ def normalize(data):
     return (data - np.min(data)) / (np.max(data) - np.min(data))
 
 
+def dir_path(path: str) -> Path | None:
+    """Validate that a string is a path to a directory."""
+    if not path or path is None:
+        return None
+    elif os.path.isdir(path):
+        return Path(path)
+    else:
+        raise argparse.ArgumentTypeError(f"Directory not found: {path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Convert DICOM and .dat to NIFTI", add_help=False)
     parser.add_argument("-h", "--help", action="store_true")
+    parser.add_argument(
+        "--dat-dir",
+        help="Directory containing DAT files. If not specified, look in the same directory as DICOM files by default.",
+        type=dir_path,
+        dest="dat_dir",
+        default="",
+    )
 
     # parse arguments
     args, other_args = parser.parse_known_args()
@@ -26,6 +45,7 @@ def main():
     if args.help:
         print("Modified version of dcm2niix that can convert .dat files to NIFTI.")
         print("You should put the .dat files next to the associated DICOM files.")
+        print("Or run with `--dat-dir=DATDIR` to look for .dat files in another location.")
         print("Below is the original dcm2niix help:\n")
         dicom2nifti("-h")
         sys.exit(0)
@@ -105,8 +125,26 @@ def main():
             # replace time with number of TEs
             rshape[0] = TEs.shape[0]
 
-        # now search for .dat files that neighbor the exemplar dicom file
-        dat_files = list(dicom.parent.glob("*.dat"))
+        # now search for .dat files
+        if args.dat_dir is None:
+            # look for .dat files that neighbor the exemplar dicom file
+            dat_files = list(dicom.parent.glob("*.dat"))
+        else:
+            # look for .dat files in the specified directory
+            # find dat files that match the Series Instance UID of the dicom
+
+            # extract Series Instance UID of this dicom file
+            # should look something like
+            # 1.3.12.2.1107.5.2.43.166158.2023072109355378899049069.0.0.0
+            # strip off the last six characters, the .0.0.0 part
+            # should then look something like
+            # 1.3.12.2.1107.5.2.43.166158.2023072109355378899049069
+            dicom_sid = pydicom.dcmread(dicom)[0x0020, 0x000e].value[:-6]
+            print(dicom_sid)
+
+            # look for .dat files in dat_dir whose name contains the sid
+            # skip hidden files starting with a .
+            dat_files = list(args.dat_dir.glob(f"[!.]*{dicom_sid}*.dat"))
 
         # if no .dat files were found, then skip this nifti
         if len(dat_files) == 0:
