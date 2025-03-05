@@ -161,27 +161,28 @@ def main():
         data_array = dat_to_array(dat_files, rshape)
         
         # check if number of frames in nifti matches number of frames in .dat files
-        if len(shape) <= 3 and data_array.shape[-1] > 1:
-            raise ValueError(f"There is one frame in nifti but {data_array.shape[-1]} frames in the .dat files.")
-        elif data_array.shape[-1] != shape[-1]:  # type: ignore
-            raise ValueError(
-                f"The number of frames in the .dat files, {data_array.shape[-1]} does not match the number of frames in the nifti, {shape[-1]}."  # type: ignore
-            )
-        data_array = np.squeeze(data_array)
+        if len(shape) <= 3:
+            # There is only one frame (time point) in the nifti.
+            if data_array.shape[-1] > 1:
+                raise ValueError(f"There is one frame in nifti but {data_array.shape[-1]} frames in the .dat files.")
+            data_array = np.squeeze(data_array)
+        else:
+            if data_array.shape[-1] != shape[-1]:
+                raise ValueError(f"The number of frames in the .dat files, {data_array.shape[-1]} does not match the number of frames in the nifti, {shape[-1]}.")
 
         # do first echo, first frame sanity check
-        if len(shape) <= 3 and not np.all(
-            np.isclose(normalize(data_array[..., 0].astype("f8")), normalize(nifti_img.dataobj))
-        ):
-            raise ValueError(
-                "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
-            )
-        elif not np.all(
-            np.isclose(normalize(data_array[..., 0, 0].astype("f8")), normalize(nifti_img.dataobj[..., 0]))
-        ):
-            raise ValueError(
-                "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
-            )
+        if len(shape) <= 3:
+            # There is only one frame (time point).
+            if not np.all(np.isclose(normalize(data_array[..., 0].astype("f8")), normalize(nifti_img.dataobj))):
+                raise ValueError(
+                    "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
+                )
+        else:
+            # Compare the first frames.
+            if not np.all(np.isclose(normalize(data_array[..., 0, 0].astype("f8")), normalize(nifti_img.dataobj[..., 0]))):
+                raise ValueError(
+                    "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
+                )
 
         # loop over each echo skipping the first one
         # only renaming if neccessary
