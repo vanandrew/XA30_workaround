@@ -32,7 +32,7 @@ def main():
     parser.add_argument("-h", "--help", action="store_true")
     parser.add_argument(
         "--dat-dir",
-        help="Directory containing DAT files. If not specified, look in the same directory as DICOM files by default. Note that each dat file should have (in the filename, the same Series Instance UID as the DICOM file it is associated with).",
+        help="Directory containing DAT files. If not specified, look in the same directory as DICOM files by default. Note that each dat file should have, in the filename, the same Series Instance UID as the DICOM file it is associated with.",
         type=dir_path,
         dest="dat_dir",
         default="",
