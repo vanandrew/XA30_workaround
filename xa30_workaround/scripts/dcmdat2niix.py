@@ -5,7 +5,9 @@ import shutil
 from pathlib import Path
 import argparse
 import numpy as np
-import nibabel as nib
+from nibabel.nifti1 import Nifti1Image
+import os
+import pydicom
 from xa30_workaround.dicom import dicom2nifti
 from xa30_workaround.dat import dat_to_array
 
@@ -15,9 +17,26 @@ def normalize(data):
     return (data - np.min(data)) / (np.max(data) - np.min(data))
 
 
+def dir_path(path: str) -> Path | None:
+    """Validate that a string is a path to a directory."""
+    if not path or path is None:
+        return None
+    elif os.path.isdir(path):
+        return Path(path)
+    else:
+        raise argparse.ArgumentTypeError(f"Directory not found: {path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Convert DICOM and .dat to NIFTI", add_help=False)
     parser.add_argument("-h", "--help", action="store_true")
+    parser.add_argument(
+        "--dat-dir",
+        help="Directory containing DAT files. If not specified, look in the same directory as DICOM files by default. Note that each dat file should have, in the filename, the same Series Instance UID as the DICOM file it is associated with.",
+        type=dir_path,
+        dest="dat_dir",
+        default="",
+    )
 
     # parse arguments
     args, other_args = parser.parse_known_args()
@@ -26,6 +45,7 @@ def main():
     if args.help:
         print("Modified version of dcm2niix that can convert .dat files to NIFTI.")
         print("You should put the .dat files next to the associated DICOM files.")
+        print("Or run with `--dat-dir=DATDIR` to look for .dat files in another location.")
         print("Below is the original dcm2niix help:\n")
         dicom2nifti("-h")
         sys.exit(0)
@@ -72,6 +92,10 @@ def main():
                     diff = TEs[1:] - TEs[0:-1]
                     TEs = np.insert(TEs[1:][diff > 0], 0, TEs[0])
                     break
+        
+        # if TEs is None, then we could not find the alTE tag and should raise an error
+        if TEs is None:
+            raise ValueError(f"Could not find alTE tag in {dicom}.")
 
         # load the json file of the nifti
         nifti_json = Path(nifti).with_suffix(".json")
@@ -88,15 +112,43 @@ def main():
             suffix = ".nii.gz"
             if not nifti_img_path.exists():
                 raise ValueError(f"Could not find nifti file {nifti_img_path}.")
-        nifti_img = nib.load(nifti_img_path)
+        nifti_img = Nifti1Image.load(nifti_img_path)
 
         # get the shape of the nifti file
+        # we want the first dimension to me the number of echos
+        # the next three dimensions should be the volume
+        # we want to ignore the number of time points
         shape = nifti_img.shape
         rshape = list(shape[::-1])
-        rshape[0] = TEs.shape[0]  # we want # of TEs instead of frames
+        if len(rshape) <= 3:
+            # it would appear there is only one time point
+            # prepend the number of echos to the array
+            rshape.insert(0, TEs.shape[0])
+        else:
+            # it looks like the first dimension is the number of time points
+            # replace time with number of TEs
+            rshape[0] = TEs.shape[0]
 
-        # now search for .dat files that neighbor the exemplar dicom file
-        dat_files = list(dicom.parent.glob("*.dat"))
+        # now search for .dat files
+        if args.dat_dir is None:
+            # look for .dat files that neighbor the exemplar dicom file
+            dat_files = list(dicom.parent.glob("*.dat"))
+        else:
+            # look for .dat files in the specified directory
+            # find dat files that match the Series Instance UID of the dicom
+
+            # extract Series Instance UID of this dicom file
+            # should look something like
+            # 1.3.12.2.1107.5.2.43.166158.2023072109355378899049069.0.0.0
+            # strip off the last six characters, the .0.0.0 part
+            # should then look something like
+            # 1.3.12.2.1107.5.2.43.166158.2023072109355378899049069
+            dicom_sid = pydicom.dcmread(dicom)[0x0020, 0x000E].value[:-6]
+            print(dicom_sid)
+
+            # look for .dat files in dat_dir whose name contains the sid
+            # skip hidden files starting with a .
+            dat_files = list(args.dat_dir.glob(f"[!.]*{dicom_sid}*.dat"))
 
         # if no .dat files were found, then skip this nifti
         if len(dat_files) == 0:
@@ -107,13 +159,26 @@ def main():
         print(f"Found {len(dat_files)} .dat files associated with {dicom}.")
         print("Converting .dat files to nifti...")
         data_array = dat_to_array(dat_files, rshape)
-
+        
         # check if number of frames in nifti matches number of frames in .dat files
-        if data_array.shape[-1] != shape[-1]:
-            raise ValueError("The number of frames in the .dat files does not match the number of frames in the nifti.")
+        if len(shape) <= 3 and data_array.shape[-1] > 1:
+            raise ValueError(f"There is one frame in nifti but {data_array.shape[-1]} frames in the .dat files.")
+        elif data_array.shape[-1] != shape[-1]:  # type: ignore
+            raise ValueError(
+                f"The number of frames in the .dat files, {data_array.shape[-1]} does not match the number of frames in the nifti, {shape[-1]}."  # type: ignore
+            )
+        data_array = np.squeeze(data_array)
 
         # do first echo, first frame sanity check
-        if not np.all(np.isclose(normalize(data_array[..., 0, 0].astype("f8")), normalize(nifti_img.dataobj[..., 0]))):
+        if len(shape) <= 3 and not np.all(
+            np.isclose(normalize(data_array[..., 0].astype("f8")), normalize(nifti_img.dataobj))
+        ):
+            raise ValueError(
+                "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
+            )
+        elif not np.all(
+            np.isclose(normalize(data_array[..., 0, 0].astype("f8")), normalize(nifti_img.dataobj[..., 0]))
+        ):
             raise ValueError(
                 "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
             )
@@ -145,9 +210,16 @@ def main():
                 # TODO: remove later if fixed
                 # resave the phase image with the dat data
                 if "_ph" in nifti.name:
-                    nib.Nifti1Image(data_array[..., 0, :], nifti_img.affine, nifti_img.header).to_filename(
-                        nifti_img_path
-                    )
+                    if len(shape) <= 3:
+                        # there is only one frame (time point)
+                        Nifti1Image(data_array[..., 0], nifti_img.affine, nifti_img.header).to_filename(
+                            nifti_img_path
+                        )
+                    else:
+                        # save all frames
+                        Nifti1Image(data_array[..., 0, :], nifti_img.affine, nifti_img.header).to_filename(
+                            nifti_img_path
+                        )
                 continue
             # substitute the echo in output_filename
             output_base = Path(str(nifti).replace(f"{echo_prefix}1", f"{echo_prefix}{i + 1}"))
@@ -159,7 +231,12 @@ def main():
             metadata_copy["ConversionSoftware"] = "dcmdat2niix"
             # save the nifti file
             output_path = output_base.with_suffix(suffix)
-            nib.Nifti1Image(data_array[..., i, :], nifti_img.affine, nifti_img.header).to_filename(output_path)
+            if len(shape) <= 3:
+                # there is only one frame (time point)
+                Nifti1Image(data_array[..., i], nifti_img.affine, nifti_img.header).to_filename(output_path)
+            else:
+                # save all frames
+                Nifti1Image(data_array[..., i, :], nifti_img.affine, nifti_img.header).to_filename(output_path)
             # save the json file
             output_json = output_path.with_suffix(".json")
             with open(output_json, "w") as f:
