@@ -16,6 +16,47 @@ def normalize(data):
     """Normalize the data to be between 0 and 1."""
     return (data - np.min(data)) / (np.max(data) - np.min(data))
 
+def match_orientation(dat, nifti):
+    """Attempt to match orientation of dat file to that of nifti file."""
+
+    # Just try to match the first frame and first echo.
+    if len(dat.shape) > 4:
+        dat_norm = normalize(dat[..., 0, 0].astype('f8'))
+        nifti_norm = normalize(nifti[..., 0])
+    else:
+        dat_norm = normalize(dat[..., 0].astype('f8'))
+        nifti_norm = normalize(nifti)
+    
+    # Check if the orientations already match.
+    if np.all(np.isclose(dat_norm, nifti_norm)):
+        return dat
+
+    # Try flipping one of the three axes.
+    if np.all(np.isclose(np.flip(dat_norm, 0), nifti_norm)):
+        return np.flip(dat, 0)
+    if np.all(np.isclose(np.flip(dat_norm, 1), nifti_norm)):
+        return np.flip(dat, 1)
+    if np.all(np.isclose(np.flip(dat_norm, 2), nifti_norm)):
+        return np.flip(dat, 2)
+
+    # Try flipping two of the three axes.
+    if np.all(np.isclose(np.flip(dat_norm, (0,1)), nifti_norm)):
+        return np.flip(dat, (0,1))
+    if np.all(np.isclose(np.flip(dat_norm, (0,2)), nifti_norm)):
+        return np.flip(dat, (0,2))
+    if np.all(np.isclose(np.flip(dat_norm, (1,2)), nifti_norm)):
+        return np.flip(dat, (1,2))
+    
+    # Try flipping all of the first three axes.
+    if np.all(np.isclose(np.flip(dat_norm, (0,1,2)), nifti_norm)):
+        return np.flip(dat, (0,1,2))
+
+    # We were unable to make the two frames line up.
+    # Most likely it is not just an orientation issue.
+    # The dat file and the nifti file appear to contain totally different data.
+    raise ValueError(
+        "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
+    )
 
 def dir_path(path: str) -> Path | None:
     """Validate that a string is a path to a directory."""
@@ -171,18 +212,7 @@ def main():
                 raise ValueError(f"The number of frames in the .dat files, {data_array.shape[-1]} does not match the number of frames in the nifti, {shape[-1]}.")
 
         # do first echo, first frame sanity check
-        if len(shape) <= 3:
-            # There is only one frame (time point).
-            if not np.all(np.isclose(normalize(data_array[..., 0].astype("f8")), normalize(nifti_img.dataobj))):
-                raise ValueError(
-                    "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
-                )
-        else:
-            # Compare the first frames.
-            if not np.all(np.isclose(normalize(data_array[..., 0, 0].astype("f8")), normalize(nifti_img.dataobj[..., 0]))):
-                raise ValueError(
-                    "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
-                )
+        data_array = match_orientation(data_array, nifti_img.dataobj)
 
         # loop over each echo skipping the first one
         # only renaming if neccessary
