@@ -42,8 +42,7 @@ to `.nii` files.
 
 `dat_copier.ps1` should be copied over to the scanner computer. You can run the script from the PowerShell console
 of the scanner. The script will ask for the patient ID and then copy the `.dat` files to the destination folder
-set in the script. Free free to modify this path to suit your needs.
-
+set in the script. Feel free to modify this path to suit your needs.
 ### Installation instructions for `dcmdat2niix`
 
 First, ensure that `dcm2niix` is installed and on your path.
