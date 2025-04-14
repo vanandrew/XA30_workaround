@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 import os
-import sys
-import site
 import setuptools
 
 # get the project directory
@@ -25,4 +23,4 @@ if __name__ == "__main__":
     setup_options = {"entry_points": entry_points}
 
     # run setup
-    setuptools.setup(**setup_options)
+    setuptools.setup(**setup_options)  # type: ignore

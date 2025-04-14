@@ -163,4 +163,5 @@ cython_debug/
 shares/
 study*/
 test_out/
+xa30_workaround/_version.py
 
