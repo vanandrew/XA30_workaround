@@ -40,7 +40,9 @@ to `.nii` files.
 
 ### Installation instructions for `host_scripts`
 
-STEPS FOR INSTALLING `dat_copier.ps1`.
+`dat_copier.ps1` should be copied over to the scanner computer. You can run the script from the PowerShell console
+of the scanner. The script will ask for the patient ID and then copy the `.dat` files to the destination folder
+set in the script. Free free to modify this path to suit your needs.
 
 ### Installation instructions for `dcmdat2niix`
 
@@ -50,18 +52,12 @@ First, ensure that `dcm2niix` is installed and on your path.
 > `dcm2niix` is available from [here](https://github.com/rordenlab/dcm2niix).
 > Version v1.0.20220720 or later is required.
 
-To install `dcmdat2niix`, clone this repo and install using `pip`:
+Then, go to the release page of this repo and download the latest release for your OS.
+
+The release contains a `dcmdat2niix` binary that you can run from the command-line:
 
 ```bash
-# install using pip and local path to repo
-git clone https://github.com/vanandrew/XA30_workaround.git
-cd XA30_workaround
-pip install .
-```
-
-If the install is successful, you should see `dcmdat2niix` in your path. You can check this by running:
-
-```bash
+# make sure it's on your PATH, else use ./dcmdat2niix
 dcmdat2niix -h
 ```
 
