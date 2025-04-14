@@ -10,6 +10,7 @@ import os
 import pydicom
 from xa30_workaround.dicom import dicom2nifti
 from xa30_workaround.dat import dat_to_array
+from xa30_workaround._version import __version__ as vers
 
 
 def normalize(data):
@@ -84,6 +85,7 @@ def main():
 
     # get help
     if args.help:
+        print(f"dcmdat2niix Version {vers}\n")
         print("Modified version of dcm2niix that can convert .dat files to NIFTI.")
         print("You should put the .dat files next to the associated DICOM files.")
         print("Or run with `--dat-dir=DATDIR` to look for .dat files in another location.")

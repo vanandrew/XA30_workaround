@@ -18,15 +18,17 @@ dependencies = [
     "numpy >= 1.22.4",
     "indexed-gzip >= 1.7.1",
 ]
-version = "0.0.1"
-dynamic = ["scripts"]
+dynamic = ["scripts", "version"]
 
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=64", "setuptools-scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 zip-safe = true
+
+[tool.setuptools_scm]
+version_file = "xa30_workaround/_version.py"
 
 [tool.setuptools.packages.find]
 exclude = ["tests", "build", "extern"]
