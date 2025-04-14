@@ -1,0 +1,122 @@
+name: Main Workflow
+
+on:
+  push:
+    branches:
+      - "*"
+  pull_request:
+    branches:
+      - "*"
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+
+jobs:
+  build-wheel:
+    name: Build and Upload Wheel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build wheel
+        run: python -m pip wheel --no-deps --wheel-dir dist ./
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel
+          path: dist/*.whl
+  pyinstaller-build-linux:
+    name: PyInstaller Build (Linux)
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/pypa/manylinux_2_28_x86_64:latest
+    steps:
+      - name: Setup Node
+        run: |
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+          # source the nvm script to make it available in the current shell
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          # download and install Node.js (you may need to restart the terminal)
+          nvm install 22
+          # symlink the node and npm binaries to a location in the PATH
+          ln -s /root/.nvm/versions/node/v22.0.0/bin/node /usr/local/bin/node
+          ln -s /root/.nvm/versions/node/v22.0.0/bin/npm /usr/local/bin/npm
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run PyInstaller
+        run: |
+          yum install -y python3.11-devel
+          python3 -m ensurepip
+          python3 -m pip install pyinstaller
+          python3 -m pip install .
+          pyinstaller --onefile $(which dcmdat2niix) --name dcmdat2niix
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dcmdat2niix_manylinux_2_28_x86_64
+          path: dist/dcmdat2niix
+  pyinstaller-build-macos:
+    name: PyInstaller Build (macOS)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install PyInstaller
+        run: |
+          python -m pip install pyinstaller
+          python -m pip install .
+      - name: Run PyInstaller
+        run: pyinstaller --onefile $(which dcmdat2niix) --name dcmdat2niix
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dcmdat2niix_macOS_arm64
+          path: dist/dcmdat2niix
+  release:
+    name: Upload binaries to GitHub Release
+    if: ${{ github.event_name == 'release' }}
+    runs-on: ubuntu-latest
+    needs: [pyinstaller-build-linux, pyinstaller-build-macos]
+    steps:
+      - name: Download Artifact (Linux)
+        uses: actions/download-artifact@v4
+        with:
+          name: dcmdat2niix_manylinux_2_28_x86_64
+      - name: Make Zip (Linux)
+        run: |
+          chmod +x dcmdat2niix
+          zip dcmdat2niix_manylinux_2_28_x86_64_${{ github.ref_name }}.zip dcmdat2niix
+          rm dcmdat2niix
+      - name: Download Artifact (macOS)
+        uses: actions/download-artifact@v4
+        with:
+          name: dcmdat2niix_macOS_arm64
+      - name: Make Zip (macOS)
+        run: |
+          chmod +x dcmdat2niix
+          zip dcmdat2niix_macOS_arm64_${{ github.ref_name }}.zip dcmdat2niix
+          rm dcmdat2niix
+      - name: Create Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file_glob: true
+          file: dcmdat2niix_*.zip
+          overwrite: true
+
+# cancel in-progress workflows if a newer one is started
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
