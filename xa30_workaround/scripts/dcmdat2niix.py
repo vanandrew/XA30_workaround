@@ -263,11 +263,8 @@ def main():
             # replace the ConversionSoftware
             metadata_copy["ConversionSoftware"] = "dcmdat2niix"
             # set the proper TE type in ImageTypeText
-            try:
-                te_idx = [t for t in range(len(metadata_copy["ImageTypeText"])) if 'TE' in metadata_copy["ImageTypeText"][t]][0]
-                metadata_copy["ImageTypeText"][te_idx] = f"TE{str(i + 1)}"
-            except IndexError:
-                pass
+            echo_label = f"TE{str(i + 1)}"
+            metadata_copy["ImageTypeText"] = [echo_label if str(val).startswith('TE') else val for val in metadata_copy["ImageTypeText"]]
             # save the nifti file
             output_path = output_base.with_suffix(suffix)
             if len(shape) <= 3:
