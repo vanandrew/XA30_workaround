@@ -29,7 +29,13 @@ jobs:
       - name: Setup Python
         run: uv python install ${{ matrix.python-version }}
       - name: Run tests
-        run: uv run --python ${{ matrix.python-version }} --extra test pytest -v
+        run: uv run --python ${{ matrix.python-version }} --extra test pytest -v --cov-report=xml
+      - name: Upload coverage
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
 
   pyinstaller-build-linux:
     needs: test

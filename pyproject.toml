@@ -24,7 +24,7 @@ dynamic = ["version"]
 dcmdat2niix = "xa30_workaround.scripts.dcmdat2niix:main"
 
 [project.optional-dependencies]
-test = ["pytest>=7.0"]
+test = ["pytest>=7.0", "pytest-cov>=4.0"]
 dev = ["ruff>=0.11.6", "pyright>=1.1.398", "pre-commit>=3.0"]
 
 [build-system]
@@ -42,6 +42,15 @@ exclude = ["tests", "build", "extern"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "--cov=xa30_workaround --cov-report=term-missing --cov-report=xml"
+
+[tool.coverage.run]
+source = ["xa30_workaround"]
+omit = ["xa30_workaround/_version.py"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 0
 
 [tool.ruff]
 line-length = 120
