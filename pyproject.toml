@@ -2,23 +2,30 @@
 name = "xa30_workaround"
 description = "scripts for xa30 workarounds"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 license = { text = "MIT License" }
-authors = [{ name = "Andrew Van", email = "vanandrew@wustl.edu" }]
+authors = [{ name = "Andrew Van", email = "vanandrew77@gmail.com" }]
 keywords = ["neuroimaging"]
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering :: Image Processing",
 ]
-urls = { gitlab = "https://gitlab.com/vanandrew/omni" }
+urls = { github = "https://github.com/vanandrew/xa30_workaround" }
 dependencies = [
     "nibabel >= 4.0.2",
     "pydicom >= 2.3.1",
     "numpy >= 1.22.4",
     "indexed-gzip >= 1.7.1",
 ]
-dynamic = ["scripts", "version"]
+dynamic = ["version"]
+
+[project.scripts]
+dcmdat2niix = "xa30_workaround.scripts.dcmdat2niix:main"
+
+[project.optional-dependencies]
+test = ["pytest>=7.0", "pytest-cov>=4.0"]
+dev = ["ruff>=0.11.6", "pyright>=1.1.398", "pre-commit>=3.0"]
 
 [build-system]
 requires = ["setuptools>=64", "setuptools-scm>=8", "wheel"]
@@ -33,7 +40,29 @@ version_file = "xa30_workaround/_version.py"
 [tool.setuptools.packages.find]
 exclude = ["tests", "build", "extern"]
 
-[tool.black]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=xa30_workaround --cov-report=term-missing --cov-report=xml"
+
+[tool.coverage.run]
+source = ["xa30_workaround"]
+omit = ["xa30_workaround/_version.py"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 0
+
+[tool.ruff]
 line-length = 120
-target-version = ['py37']
-exclude = "extern|build"
+target-version = "py39"
+exclude = ["extern", "build"]
+
+[tool.ruff.lint]
+ignore = ["E203", "E741"]
+
+[tool.ruff.format]
+line-ending = "auto"
+
+[tool.pyright]
+pythonVersion = "3.9"
+exclude = ["extern", "build", "**/__pycache__", "**/.*", ".venv", "**/node_modules"]

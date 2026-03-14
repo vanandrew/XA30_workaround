@@ -15,7 +15,29 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.11"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+      - name: Setup Python
+        run: uv python install ${{ matrix.python-version }}
+      - name: Run tests
+        run: uv run --python ${{ matrix.python-version }} --extra test pytest -v --cov-report=xml
+      - name: Upload coverage
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
   pyinstaller-build-linux:
+    needs: test
     name: PyInstaller Build (Linux)
     runs-on: ubuntu-latest
     container:
@@ -48,6 +70,7 @@ jobs:
           path: dist/dcmdat2niix
   pyinstaller-build-macos:
     name: PyInstaller Build (macOS)
+    needs: test
     runs-on: macos-latest
     steps:
       - name: Checkout
