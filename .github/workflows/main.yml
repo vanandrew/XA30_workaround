@@ -34,8 +34,7 @@ jobs:
         if: matrix.python-version == '3.11'
         uses: codecov/codecov-action@v5
         with:
-          files: coverage.xml
-          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   pyinstaller-build-linux:
     needs: test
@@ -57,12 +56,14 @@ jobs:
           ln -s /root/.nvm/versions/node/v22.0.0/bin/npm /usr/local/bin/npm
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install Python shared library
+        run: yum install -y python3.11-devel
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
       - name: Run PyInstaller
         run: |
           source $HOME/.local/bin/env
-          uv run --python 3.11 --with pyinstaller pyinstaller --onefile $(uv run --python 3.11 which dcmdat2niix) --name dcmdat2niix
+          uv run --python-preference system --python 3.11 --with pyinstaller pyinstaller --onefile $(uv run --python-preference system --python 3.11 which dcmdat2niix) --name dcmdat2niix
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -75,11 +76,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
       - name: Install uv
         uses: astral-sh/setup-uv@v4
       - name: Build with PyInstaller
         run: |
-          uv run --python 3.11 --with pyinstaller pyinstaller --onefile $(uv run --python 3.11 which dcmdat2niix) --name dcmdat2niix
+          uv run --python-preference system --python 3.11 --with pyinstaller pyinstaller --onefile $(uv run --python-preference system --python 3.11 which dcmdat2niix) --name dcmdat2niix
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
