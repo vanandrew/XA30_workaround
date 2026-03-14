@@ -262,6 +262,9 @@ def main():
             metadata_copy["EchoTime"] = t
             # replace the ConversionSoftware
             metadata_copy["ConversionSoftware"] = "dcmdat2niix"
+            # set the proper TE type in ImageTypeText
+            echo_label = f"TE{str(i + 1)}"
+            metadata_copy["ImageTypeText"] = [echo_label if str(val).startswith('TE') else val for val in metadata_copy["ImageTypeText"]]
             # save the nifti file
             output_path = output_base.with_suffix(suffix)
             if len(shape) <= 3:
@@ -270,8 +273,8 @@ def main():
             else:
                 # save all frames
                 Nifti1Image(data_array[..., i, :], nifti_img.affine, nifti_img.header).to_filename(output_path)
-            # save the json file
-            output_json = output_path.with_suffix(".json")
+            # save the json file (from the base path not the nifti path)
+            output_json = output_base.with_suffix(".json")
             with open(output_json, "w") as f:
                 json.dump(metadata_copy, f, indent=4)
     print("Done.")
