@@ -1,3 +1,6 @@
+[![Main Workflow](https://github.com/vanandrew/XA30_workaround/actions/workflows/main.yml/badge.svg)](https://github.com/vanandrew/XA30_workaround/actions/workflows/main.yml)
+[![codecov](https://codecov.io/gh/vanandrew/XA30_workaround/graph/badge.svg?token=Q8KR7NO5NF)](https://codecov.io/gh/vanandrew/XA30_workaround)
+
 # XA30_workaround
 
 This repo contains some scripts to get around the limitations of the SIEMENS XA30A image database implementation,
