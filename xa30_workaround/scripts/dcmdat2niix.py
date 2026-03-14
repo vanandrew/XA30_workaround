@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 import sys
 import json
 import shutil
@@ -17,17 +19,18 @@ def normalize(data):
     """Normalize the data to be between 0 and 1."""
     return (data - np.min(data)) / (np.max(data) - np.min(data))
 
+
 def match_orientation(dat, nifti):
     """Attempt to match orientation of dat file to that of nifti file."""
 
     # Just try to match the first frame and first echo.
     if len(dat.shape) > 4:
-        dat_norm = normalize(dat[..., 0, 0].astype('f8'))
+        dat_norm = normalize(dat[..., 0, 0].astype("f8"))
         nifti_norm = normalize(nifti[..., 0])
     else:
-        dat_norm = normalize(dat[..., 0].astype('f8'))
+        dat_norm = normalize(dat[..., 0].astype("f8"))
         nifti_norm = normalize(nifti)
-    
+
     # Check if the orientations already match.
     if np.all(np.isclose(dat_norm, nifti_norm)):
         return dat
@@ -41,23 +44,22 @@ def match_orientation(dat, nifti):
         return np.flip(dat, 2)
 
     # Try flipping two of the three axes.
-    if np.all(np.isclose(np.flip(dat_norm, (0,1)), nifti_norm)):
-        return np.flip(dat, (0,1))
-    if np.all(np.isclose(np.flip(dat_norm, (0,2)), nifti_norm)):
-        return np.flip(dat, (0,2))
-    if np.all(np.isclose(np.flip(dat_norm, (1,2)), nifti_norm)):
-        return np.flip(dat, (1,2))
-    
+    if np.all(np.isclose(np.flip(dat_norm, (0, 1)), nifti_norm)):
+        return np.flip(dat, (0, 1))
+    if np.all(np.isclose(np.flip(dat_norm, (0, 2)), nifti_norm)):
+        return np.flip(dat, (0, 2))
+    if np.all(np.isclose(np.flip(dat_norm, (1, 2)), nifti_norm)):
+        return np.flip(dat, (1, 2))
+
     # Try flipping all of the first three axes.
-    if np.all(np.isclose(np.flip(dat_norm, (0,1,2)), nifti_norm)):
-        return np.flip(dat, (0,1,2))
+    if np.all(np.isclose(np.flip(dat_norm, (0, 1, 2)), nifti_norm)):
+        return np.flip(dat, (0, 1, 2))
 
     # We were unable to make the two frames line up.
     # Most likely it is not just an orientation issue.
     # The dat file and the nifti file appear to contain totally different data.
-    raise ValueError(
-        "Sanity check failed. The first echo, first frame of the .dat files does not match the nifti."
-    )
+    raise ValueError("Sanity check failed. The first echo, first frame of the .dat files does not match the nifti.")
+
 
 def dir_path(path: str) -> Path | None:
     """Validate that a string is a path to a directory."""
@@ -135,7 +137,7 @@ def main():
                     diff = TEs[1:] - TEs[0:-1]
                     TEs = np.insert(TEs[1:][diff > 0], 0, TEs[0])
                     break
-        
+
         # if TEs is None, then we could not find the alTE tag and should raise an error
         if TEs is None:
             raise ValueError(f"Could not find alTE tag in {dicom}.")
@@ -202,7 +204,7 @@ def main():
         print(f"Found {len(dat_files)} .dat files associated with {dicom}.")
         print("Converting .dat files to nifti...")
         data_array = dat_to_array(dat_files, rshape)
-        
+
         # check if number of frames in nifti matches number of frames in .dat files
         if len(shape) <= 3:
             # There is only one frame (time point) in the nifti.
@@ -211,7 +213,9 @@ def main():
             data_array = np.squeeze(data_array)
         else:
             if data_array.shape[-1] != shape[-1]:
-                raise ValueError(f"The number of frames in the .dat files, {data_array.shape[-1]} does not match the number of frames in the nifti, {shape[-1]}.")
+                raise ValueError(
+                    f"The number of frames in the .dat files, {data_array.shape[-1]} does not match the number of frames in the nifti, {shape[-1]}."
+                )
 
         # do first echo, first frame sanity check
         data_array = match_orientation(data_array, nifti_img.dataobj)
@@ -245,9 +249,7 @@ def main():
                 if "_ph" in nifti.name:
                     if len(shape) <= 3:
                         # there is only one frame (time point)
-                        Nifti1Image(data_array[..., 0], nifti_img.affine, nifti_img.header).to_filename(
-                            nifti_img_path
-                        )
+                        Nifti1Image(data_array[..., 0], nifti_img.affine, nifti_img.header).to_filename(nifti_img_path)
                     else:
                         # save all frames
                         Nifti1Image(data_array[..., 0, :], nifti_img.affine, nifti_img.header).to_filename(
@@ -264,7 +266,9 @@ def main():
             metadata_copy["ConversionSoftware"] = "dcmdat2niix"
             # set the proper TE type in ImageTypeText
             echo_label = f"TE{str(i + 1)}"
-            metadata_copy["ImageTypeText"] = [echo_label if str(val).startswith('TE') else val for val in metadata_copy["ImageTypeText"]]
+            metadata_copy["ImageTypeText"] = [
+                echo_label if str(val).startswith("TE") else val for val in metadata_copy["ImageTypeText"]
+            ]
             # save the nifti file
             output_path = output_base.with_suffix(suffix)
             if len(shape) <= 3:

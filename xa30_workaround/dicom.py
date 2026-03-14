@@ -12,6 +12,7 @@ except subprocess.CalledProcessError:
 
 def execute(cmd):
     popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True)
+    assert popen.stdout is not None
     for stdout_line in iter(popen.stdout.readline, ""):
         yield stdout_line
     popen.stdout.close()
