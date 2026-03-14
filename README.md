@@ -22,6 +22,7 @@ and contain just the reconstructed (image-domain) data for 1 measurement instanc
 > [!NOTE]
 > The solution is embedded into a modified version of the ICE program (.ipr file) for the CMRR BOLD sequence,
 > and gets activated only if the scan has “MBME_DcmOnlyE1” anywhere in its name.
+> For access to the ICE program, please contact: Cihat Eldeniz @ <cihat.eldeniz@wustl.edu>
 
 To copy the extra binary files written by the ICE program, you can use the `dat_copier.ps1` PowerShell script provided.
 The user runs it and enters the patient ID to initiate the process.
